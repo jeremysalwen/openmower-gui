@@ -157,10 +157,19 @@ export const MapPage = () => {
                 const newFeatures = {...oldFeatures};
                 mowingPaths.forEach((mowingPath, index) => {
                     if (mowingPath?.Poses) {
-                        const line = mowingPath.Poses.map((pose) => {
+                        const coordinates = mowingPath.Poses.map((pose) => {
                             return transpose(offsetX, offsetY, datum, pose.Pose?.Position?.Y!, pose.Pose?.Position?.X!)
                         });
-                        newFeatures["mowingPath-" + index.toString()] = new PathFeature("mowingPath-" + index.toString(), line, `rgba(107, 255, 188, 0.68)`, mowingToolWidth);
+                        
+                        const MAX_VERTICES_PER_SEGMENT = 65000;
+                        
+                        for (let i = 0; i < coordinates.length; i += MAX_VERTICES_PER_SEGMENT) {
+                            const segmentCoords = coordinates.slice(i, i + MAX_VERTICES_PER_SEGMENT);
+                            const segmentIndex = Math.floor(i / MAX_VERTICES_PER_SEGMENT);
+                            const featureId = segmentIndex === 0 ? "mowingPath-" + index : "mowingPath-" + index + "-" + segmentIndex;
+                            
+                            newFeatures[featureId] = new PathFeature(featureId, segmentCoords, `rgba(107, 255, 188, 0.68)`, mowingToolWidth);
+                        }
                     }
                 })
                 return newFeatures
