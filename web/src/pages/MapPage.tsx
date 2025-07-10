@@ -152,19 +152,32 @@ export const MapPage = () => {
             const mowingPaths = JSON.parse(e) as Path[];
             setFeatures(oldFeatures => {
                 const newFeatures = {...oldFeatures};
+                // Remove previous mowing path features
+                Object.keys(newFeatures).forEach(key => {
+                    if (key.startsWith("mowingPath-")) {
+                        delete newFeatures[key];
+                    }
+                });
                 mowingPaths.forEach((mowingPath, index) => {
-                    if (mowingPath?.Poses) {
-                        newFeatures["mowingPath-" + index] = {
-                            id: "mowingPath-" + index,
+                    if (!mowingPath?.Poses) {
+                        return;
+                    }
+                    const coords = mowingPath.Poses.map((pose) => {
+                        return transpose(offsetX, offsetY, datum, pose.Pose?.Position?.Y!, pose.Pose?.Position?.X!)
+                    })
+                    const chunkSize = 65000;
+                    for (let i = 0; i < coords.length; i += chunkSize) {
+                        const segment = coords.slice(i, i + chunkSize);
+                        const segId = `mowingPath-${index}-${Math.floor(i / chunkSize)}`;
+                        newFeatures[segId] = {
+                            id: segId,
                             type: 'Feature',
                             properties: {
                                 color: `rgba(107, 255, 188, 0.68)`,
                                 width: mowingToolWidth,
                             },
                             geometry: {
-                                coordinates: mowingPath.Poses.map((pose) => {
-                                    return transpose(offsetX, offsetY, datum, pose.Pose?.Position?.Y!, pose.Pose?.Position?.X!)
-                                }),
+                                coordinates: segment,
                                 type: "LineString"
                             }
                         };
